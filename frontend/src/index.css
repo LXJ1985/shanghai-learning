@@ -1,0 +1,339 @@
+/* ============================================
+   Design System — warm-editorial
+   Aesthetic: scholarly, warm, intentional
+   ============================================ */
+
+:root {
+  /* --- Palette --- */
+  --bg-base: #F5F0EB;
+  --bg-surface: #FEFCF9;
+  --bg-elevated: #FFFFFF;
+  --bg-muted: #EDE7E0;
+
+  --ink-primary: #1A1A1A;
+  --ink-secondary: #6B6560;
+  --ink-tertiary: #9C9590;
+  --ink-inverse: #FEFCF9;
+
+  --accent: #C45D3E;
+  --accent-hover: #A84D32;
+  --accent-soft: rgba(196, 93, 62, 0.08);
+
+  --sage: #4A7C59;
+  --sage-soft: rgba(74, 124, 89, 0.08);
+
+  --border: #E5DED6;
+  --border-strong: #D0C8BE;
+
+  /* --- Typography --- */
+  --font-serif: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+  --font-sans: 'DM Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* --- Spacing --- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --space-3xl: 96px;
+
+  /* --- Radius --- */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  /* --- Shadow --- */
+  --shadow-sm: 0 1px 2px rgba(26, 26, 26, 0.04);
+  --shadow-md: 0 4px 12px rgba(26, 26, 26, 0.06);
+  --shadow-lg: 0 8px 32px rgba(26, 26, 26, 0.08);
+
+  /* --- Transition --- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+}
+
+/* --- Reset --- */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--ink-primary);
+  background: var(--bg-base);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* --- Noise texture overlay --- */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* --- Typography --- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--ink-primary);
+}
+
+h1 { font-size: 2.5rem; font-weight: 700; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.375rem; }
+h4 { font-size: 1.125rem; font-weight: 500; }
+
+p {
+  color: var(--ink-secondary);
+  line-height: 1.7;
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-tertiary);
+}
+
+/* --- Selection --- */
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* --- Focus --- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Ant Design Overrides --- */
+
+/* Remove default Ant blue theme */
+.ant-btn-primary {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+  box-shadow: none !important;
+  transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+.ant-btn-primary:hover {
+  background: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+  transform: translateY(-1px);
+}
+
+.ant-btn-default {
+  border-color: var(--border-strong) !important;
+  color: var(--ink-primary) !important;
+  border-radius: var(--radius-md) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.ant-btn-default:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+/* Card overrides */
+.ant-card {
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--border) !important;
+  background: var(--bg-surface) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: box-shadow var(--duration-normal) var(--ease-out) !important;
+}
+
+.ant-card:hover {
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Table overrides */
+.ant-table {
+  font-family: var(--font-sans) !important;
+}
+
+.ant-table-thead > tr > th {
+  background: var(--bg-muted) !important;
+  border-color: var(--border) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
+  font-size: 0.8125rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--ink-secondary) !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-color: var(--border) !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: var(--accent-soft) !important;
+}
+
+/* Tag overrides */
+.ant-tag {
+  border-radius: var(--radius-sm) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Select overrides */
+.ant-select-selector {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--border) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.ant-select-focused .ant-select-selector {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-soft) !important;
+}
+
+/* Input overrides */
+.ant-input, .ant-input-password {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--border) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.ant-input:focus, .ant-input-focused {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-soft) !important;
+}
+
+/* Progress overrides */
+.ant-progress-bg {
+  background: var(--accent) !important;
+}
+
+/* Collapse overrides */
+.ant-collapse {
+  border-color: var(--border) !important;
+  background: transparent !important;
+}
+
+.ant-collapse-header {
+  font-family: var(--font-serif) !important;
+  font-weight: 500 !important;
+}
+
+/* Empty state */
+.ant-empty-description {
+  color: var(--ink-tertiary) !important;
+  font-style: italic !important;
+}
+
+/* Statistic */
+.ant-statistic-title {
+  font-family: var(--font-sans) !important;
+  font-size: 0.6875rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  color: var(--ink-tertiary) !important;
+}
+
+.ant-statistic-content {
+  font-family: var(--font-serif) !important;
+}
+
+/* --- Animations --- */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in-up {
+  animation: fadeInUp var(--duration-slow) var(--ease-out) both;
+}
+
+.fade-in {
+  animation: fadeIn var(--duration-normal) var(--ease-out) both;
+}
+
+/* Staggered children animation */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp var(--duration-slow) var(--ease-out) both;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 540ms; }
+
+/* --- Utility classes --- */
+.page-enter {
+  animation: fadeInUp var(--duration-slow) var(--ease-out) both;
+}
+
+.text-muted {
+  color: var(--ink-tertiary);
+  font-size: 0.8125rem;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-lg) 0;
+}

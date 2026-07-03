@@ -1,0 +1,33 @@
+# 环境变量
+.env
+
+# Java
+backend/target/
+backend/*.iml
+backend/.idea/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+*.iml
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+backend/logs/
+
+# Docker volumes
+mysql-data/
+redis-data/
+
+# H2 data files
+backend/data/
