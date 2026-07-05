@@ -11,6 +11,13 @@ import {
   FileSearchOutlined,
   ApartmentOutlined,
   BulbOutlined,
+  RobotOutlined,
+  ExperimentOutlined,
+  FireOutlined,
+  FunctionOutlined,
+  PlaySquareOutlined,
+  ReadOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../../store/authStore'
 
@@ -23,10 +30,25 @@ export default function MainLayout() {
   const isAdmin = userInfo?.role === 2
 
   const isAdminPath = location.pathname.startsWith('/admin')
+  const isDemoPath = ['/algorithm', '/physics', '/chemistry', '/math', '/poetry', '/biology', '/geography'].includes(location.pathname)
 
   const menuItems = [
     { key: '/subjects', icon: <BookOutlined />, label: '学科' },
     { key: '/practice', icon: <FileTextOutlined />, label: '练习' },
+    {
+      key: 'demo-group',
+      icon: <PlaySquareOutlined />,
+      label: '演示中心',
+      children: [
+        { key: '/algorithm', icon: <RobotOutlined />, label: '算法教学' },
+        { key: '/physics', icon: <ExperimentOutlined />, label: '物理实验' },
+        { key: '/chemistry', icon: <FireOutlined />, label: '化学实验' },
+        { key: '/math', icon: <FunctionOutlined />, label: '数学函数' },
+        { key: '/poetry', icon: <ReadOutlined />, label: '诗词动画' },
+        { key: '/biology', icon: <ExperimentOutlined />, label: '生物知识' },
+        { key: '/geography', icon: <EnvironmentOutlined />, label: '地理知识' },
+      ],
+    },
     { key: '/exam', icon: <FileTextOutlined />, label: '考试' },
     { key: '/wrong', icon: <HistoryOutlined />, label: '错题' },
     { key: '/progress', icon: <LineChartOutlined />, label: '进度' },
@@ -95,7 +117,7 @@ export default function MainLayout() {
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}
-          defaultOpenKeys={isAdminPath ? ['admin-group'] : []}
+          defaultOpenKeys={[...(isAdminPath ? ['admin-group'] : []), ...(isDemoPath ? ['demo-group'] : [])]}
           items={menuItems}
           onClick={({ key }) => {
             if (key !== '/divider') navigate(key)

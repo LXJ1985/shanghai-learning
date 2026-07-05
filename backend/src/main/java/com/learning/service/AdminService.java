@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
@@ -432,83 +433,171 @@ public class AdminService {
             }
 
             byte[] bytes = file.getBytes();
-            String content;
-            if (bytes.length >= 3 && (bytes[0] & 0xFF) == 0xEF && (bytes[1] & 0xFF) == 0xBB && (bytes[2] & 0xFF) == 0xBF) {
-                content = new String(bytes, 3, bytes.length - 3, "UTF-8");
-            } else {
-                content = new String(bytes, "UTF-8");
-                if (content.contains("\uFFFD")) {
-                    content = new String(bytes, "GBK");
-                }
+            String originalFilename = file.getOriginalFilename();
+            boolean isExcel = originalFilename != null
+                    && (originalFilename.endsWith(".xlsx") || originalFilename.endsWith(".xls"));
+            // 也通过文件头检测: xlsx 以 PK 开头 (ZIP格式)
+            if (!isExcel && bytes.length >= 2 && (bytes[0] & 0xFF) == 0x50 && (bytes[1] & 0xFF) == 0x4B) {
+                isExcel = true;
             }
-            String[] lines = content.split("\n");
-            String separator = null;
-            int dataRowNum = 0;
-            for (String line : lines) {
-                line = line.trim();
-                if (line.isEmpty()) continue;
 
-                if (separator == null) {
-                    if (line.contains("|")) {
-                        separator = "\\|";
-                    } else if (line.contains("\t")) {
-                        separator = "\t";
-                    } else {
-                        separator = ",";
+            if (isExcel) {
+                // 使用 POI 解析 Excel
+                try (Workbook wb = WorkbookFactory.create(new java.io.ByteArrayInputStream(bytes))) {
+                    Sheet sheet = wb.getSheetAt(0);
+                    int dataRowNum = 0;
+                    for (Row row : sheet) {
+                        if (row.getRowNum() == 0) {
+                            // 跳过表头行（检查第一列是否包含"示例"或"章节"）
+                            Cell firstCell = row.getCell(0);
+                            if (firstCell != null) {
+                                String val = getCellStringValue(firstCell);
+                                if (val != null && (val.contains("示例") || val.contains("章节"))) {
+                                    continue;
+                                }
+                            }
+                        }
+                        // 跳过空行
+                        Cell firstCell = row.getCell(0);
+                        if (firstCell == null || getCellStringValue(firstCell) == null
+                                || getCellStringValue(firstCell).trim().isEmpty()) {
+                            continue;
+                        }
+
+                        dataRowNum++;
+                        try {
+                            int lastCol = row.getLastCellNum();
+                            if (lastCol < 3) {
+                                fail++;
+                                errors.add("第" + (row.getRowNum() + 1) + "行: 格式错误(至少3列: 章节名称|知识点名称|排序)");
+                                continue;
+                            }
+
+                            String[] parts = new String[lastCol];
+                            for (int c = 0; c < lastCol; c++) {
+                                Cell cell = row.getCell(c);
+                                parts[c] = cell != null ? getCellStringValue(cell) : "";
+                            }
+
+                            // 第一列为章节名称，匹配章节ID
+                            long chapterId;
+                            if (defaultChapterId != null && defaultChapterId > 0) {
+                                chapterId = defaultChapterId;
+                            } else {
+                                String chapterName = parts[0].trim();
+                                chapterId = nameToChapterId.getOrDefault(chapterName, 0L);
+                                if (chapterId == 0L) {
+                                    fail++;
+                                    errors.add("第" + (row.getRowNum() + 1) + "行: 章节\"" + chapterName + "\"不存在，请检查名称是否完全匹配");
+                                    continue;
+                                }
+                            }
+                            String name = parts[1].trim();
+                            int sortOrder = parseIntSafe(parts[lastCol - 1], dataRowNum);
+
+                            Knowledge k = new Knowledge();
+                            k.setChapterId(chapterId);
+                            k.setName(name);
+                            k.setSortOrder(sortOrder);
+
+                            // 中间列: summary|keyPoints|formulas|examples (可选)
+                            if (parts.length >= 7) {
+                                k.setSummary(safeGet(parts, 2));
+                                k.setKeyPoints(safeGet(parts, 3));
+                                k.setFormulas(safeGet(parts, 4));
+                                k.setExamples(safeGet(parts, 5));
+                            } else if (parts.length >= 4) {
+                                k.setSummary(safeGet(parts, 2));
+                            }
+
+                            knowledgeMapper.insert(k);
+                            success++;
+                        } catch (Exception e) {
+                            fail++;
+                            errors.add("第" + (row.getRowNum() + 1) + "行解析失败: " + e.getMessage());
+                        }
                     }
                 }
-
-                String[] parts = line.split(separator);
-                // 跳过表头（第一列包含"示例"或"章节"等关键字）
-                if (dataRowNum == 0 && parts.length > 0
-                        && (parts[0].trim().contains("示例") || parts[0].trim().contains("章节"))) {
-                    continue;
+            } else {
+                // 文本格式解析 (TXT/CSV)
+                String content;
+                if (bytes.length >= 3 && (bytes[0] & 0xFF) == 0xEF && (bytes[1] & 0xFF) == 0xBB && (bytes[2] & 0xFF) == 0xBF) {
+                    content = new String(bytes, 3, bytes.length - 3, "UTF-8");
+                } else {
+                    content = new String(bytes, "UTF-8");
+                    if (content.contains("\uFFFD")) {
+                        content = new String(bytes, "GBK");
+                    }
                 }
+                String[] lines = content.split("\n");
+                String separator = null;
+                int dataRowNum = 0;
+                for (String line : lines) {
+                    line = line.trim();
+                    if (line.isEmpty()) continue;
 
-                dataRowNum++;
-                try {
-                    if (parts.length < 3) {
-                        fail++;
-                        errors.add("第" + dataRowNum + "行: 格式错误(至少3列: 章节名称|知识点名称|排序): " + line);
+                    if (separator == null) {
+                        if (line.contains("|")) {
+                            separator = "\\|";
+                        } else if (line.contains("\t")) {
+                            separator = "\t";
+                        } else {
+                            separator = ",";
+                        }
+                    }
+
+                    String[] parts = line.split(separator);
+                    // 跳过表头（第一列包含"示例"或"章节"等关键字）
+                    if (dataRowNum == 0 && parts.length > 0
+                            && (parts[0].trim().contains("示例") || parts[0].trim().contains("章节"))) {
                         continue;
                     }
 
-                    // 第一列为章节名称，匹配章节ID
-                    long chapterId;
-                    if (defaultChapterId != null && defaultChapterId > 0) {
-                        chapterId = defaultChapterId;
-                    } else {
-                        String chapterName = parts[0].trim();
-                        chapterId = nameToChapterId.getOrDefault(chapterName, 0L);
-                        if (chapterId == 0L) {
+                    dataRowNum++;
+                    try {
+                        if (parts.length < 3) {
                             fail++;
-                            errors.add("第" + dataRowNum + "行: 章节\"" + chapterName + "\"不存在，请检查名称是否完全匹配");
+                            errors.add("第" + dataRowNum + "行: 格式错误(至少3列: 章节名称|知识点名称|排序): " + line);
                             continue;
                         }
+
+                        // 第一列为章节名称，匹配章节ID
+                        long chapterId;
+                        if (defaultChapterId != null && defaultChapterId > 0) {
+                            chapterId = defaultChapterId;
+                        } else {
+                            String chapterName = parts[0].trim();
+                            chapterId = nameToChapterId.getOrDefault(chapterName, 0L);
+                            if (chapterId == 0L) {
+                                fail++;
+                                errors.add("第" + dataRowNum + "行: 章节\"" + chapterName + "\"不存在，请检查名称是否完全匹配");
+                                continue;
+                            }
+                        }
+                        String name = parts[1].trim();
+                        int sortOrder = parseIntSafe(parts[parts.length - 1], dataRowNum);
+
+                        Knowledge k = new Knowledge();
+                        k.setChapterId(chapterId);
+                        k.setName(name);
+                        k.setSortOrder(sortOrder);
+
+                        // 中间列: summary|keyPoints|formulas|examples (可选)
+                        if (parts.length >= 7) {
+                            k.setSummary(safeGet(parts, 2));
+                            k.setKeyPoints(safeGet(parts, 3));
+                            k.setFormulas(safeGet(parts, 4));
+                            k.setExamples(safeGet(parts, 5));
+                        } else if (parts.length >= 4) {
+                            k.setSummary(safeGet(parts, 2));
+                        }
+
+                        knowledgeMapper.insert(k);
+                        success++;
+                    } catch (Exception e) {
+                        fail++;
+                        errors.add("第" + dataRowNum + "行解析失败: " + e.getMessage());
                     }
-                    String name = parts[1].trim();
-                    int sortOrder = Integer.parseInt(parts[parts.length - 1].trim());
-
-                    Knowledge k = new Knowledge();
-                    k.setChapterId(chapterId);
-                    k.setName(name);
-                    k.setSortOrder(sortOrder);
-
-                    // 中间列: summary|keyPoints|formulas|examples (可选)
-                    if (parts.length >= 7) {
-                        k.setSummary(safeGet(parts, 2));
-                        k.setKeyPoints(safeGet(parts, 3));
-                        k.setFormulas(safeGet(parts, 4));
-                        k.setExamples(safeGet(parts, 5));
-                    } else if (parts.length >= 4) {
-                        k.setSummary(safeGet(parts, 2));
-                    }
-
-                    knowledgeMapper.insert(k);
-                    success++;
-                } catch (Exception e) {
-                    fail++;
-                    errors.add("第" + dataRowNum + "行解析失败: " + e.getMessage());
                 }
             }
         } catch (Exception e) {
@@ -522,10 +611,58 @@ public class AdminService {
         return result;
     }
 
+    /**
+     * 获取 Excel 单元格的字符串值（兼容数字、字符串、布尔等类型）
+     */
+    private String getCellStringValue(Cell cell) {
+        if (cell == null) return "";
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return numericToString(cell.getNumericCellValue());
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA:
+                try {
+                    return cell.getStringCellValue();
+                } catch (Exception e) {
+                    try {
+                        return numericToString(cell.getNumericCellValue());
+                    } catch (Exception e2) {
+                        return "";
+                    }
+                }
+            default:
+                return "";
+        }
+    }
+
+    private String numericToString(double val) {
+        if (val == Math.floor(val) && !Double.isInfinite(val)) {
+            return String.valueOf((long) val);
+        }
+        return String.valueOf(val);
+    }
+
     private String safeGet(String[] parts, int index) {
         if (index >= parts.length) return "";
         String val = parts[index].trim();
         return val.isEmpty() ? null : val;
+    }
+
+    /**
+     * 安全解析整数，空值或非数字返回默认值1
+     */
+    private int parseIntSafe(String raw, int rowNum) {
+        if (raw == null) return rowNum;
+        String val = raw.trim();
+        if (val.isEmpty()) return rowNum;
+        try {
+            return Integer.parseInt(val);
+        } catch (NumberFormatException e) {
+            return rowNum;
+        }
     }
 
     /**

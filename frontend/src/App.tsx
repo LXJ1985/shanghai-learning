@@ -10,6 +10,13 @@ import Practice from './pages/student/Practice'
 import ExamCreate from './pages/student/ExamCreate'
 import WrongQuestions from './pages/student/WrongQuestions'
 import StudentProgress from './pages/student/StudentProgress'
+import AlgorithmTeaching from './pages/student/AlgorithmTeaching'
+import PhysicsSimulation from './pages/student/PhysicsSimulation'
+import ChemistryLab from './pages/student/ChemistryLab'
+import MathFunctions from './pages/student/MathFunctions'
+import PoetryDemo from './pages/student/PoetryDemo'
+import BiologyDemo from './pages/student/BiologyDemo'
+import GeographyDemo from './pages/student/GeographyDemo'
 import AdminQuestions from './pages/admin/AdminQuestions'
 import AdminChapters from './pages/admin/AdminChapters'
 import AdminKnowledge from './pages/admin/AdminKnowledge'
@@ -107,6 +114,13 @@ function App() {
             <Route path="subjects" element={<SubjectList />} />
             <Route path="knowledge/:id" element={<KnowledgeDetail />} />
             <Route path="practice" element={<Practice />} />
+            <Route path="algorithm" element={<AlgorithmTeaching />} />
+            <Route path="physics" element={<PhysicsSimulation />} />
+            <Route path="chemistry" element={<ChemistryLab />} />
+            <Route path="math" element={<MathFunctions />} />
+            <Route path="poetry" element={<PoetryDemo />} />
+            <Route path="biology" element={<BiologyDemo />} />
+            <Route path="geography" element={<GeographyDemo />} />
             <Route path="exam" element={<ExamCreate />} />
             <Route path="wrong" element={<WrongQuestions />} />
             <Route path="progress" element={<StudentProgress />} />
