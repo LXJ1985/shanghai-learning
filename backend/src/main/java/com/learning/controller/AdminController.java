@@ -5,6 +5,7 @@ import com.learning.common.annotation.OpLog;
 import com.learning.common.result.Result;
 import com.learning.entity.Question;
 import com.learning.service.AdminService;
+import com.learning.service.AiCourseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,16 +26,19 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AiCourseService aiCourseService;
 
     @GetMapping("/questions")
     public Result<Page<Question>> getQuestions(
             @RequestParam(required = false) Long subjectId,
+            @RequestParam(required = false) Long gradeId,
+            @RequestParam(required = false) String semester,
             @RequestParam(required = false) Long chapterId,
             @RequestParam(required = false) Integer type,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return Result.success(adminService.getQuestions(subjectId, chapterId, type, keyword, page, size));
+        return Result.success(adminService.getQuestions(subjectId, gradeId, semester, chapterId, type, keyword, page, size));
     }
 
     @PostMapping("/questions")
@@ -133,9 +138,76 @@ public class AdminController {
     }
 
     /**
-     * 修复章节学科ID映射
-     * 请求体示例: {"1": 2, "2": 1, "4": 9} 表示: 学科1->2, 学科2->1, 学科4->9
+     * AI 智能获取课程信息 - 预览（不入库，返回原始数据供确认）
      */
+    @PostMapping("/chapters/ai-fetch/preview")
+    @OpLog(module = "章节管理", operation = "AI智能获取预览")
+    public Result<Map<String, Object>> previewCourseByAi(
+            @RequestParam Long gradeId,
+            @RequestParam Long subjectId,
+            @RequestParam String semester) {
+        return Result.success(aiCourseService.previewCourseData(gradeId, subjectId, semester));
+    }
+
+    /**
+     * AI 智能获取课程信息 - 确认保存
+     */
+    @PostMapping("/chapters/ai-fetch/confirm")
+    @OpLog(module = "章节管理", operation = "AI智能获取确认保存")
+    public Result<Map<String, Object>> confirmCourseByAi(
+            @RequestParam Long gradeId,
+            @RequestParam Long subjectId,
+            @RequestBody List<Map<String, Object>> chapters) {
+        return Result.success(aiCourseService.confirmCourseData(gradeId, subjectId, chapters));
+    }
+
+    /**
+     * AI 智能搜题 - 预览
+     */
+    @PostMapping("/questions/ai-search/preview")
+    @OpLog(module = "题库管理", operation = "AI智能搜题预览")
+    public Result<Map<String, Object>> previewAiQuestions(
+            @RequestParam Long gradeId,
+            @RequestParam Long subjectId,
+            @RequestParam String semester) {
+        return Result.success(aiCourseService.previewAiQuestions(gradeId, subjectId, semester));
+    }
+
+    /**
+     * AI 智能搜题 - 确认保存
+     */
+    @PostMapping("/questions/ai-search/confirm")
+    @OpLog(module = "题库管理", operation = "AI智能搜题确认保存")
+    public Result<Map<String, Object>> confirmAiQuestions(
+            @RequestParam Long gradeId,
+            @RequestParam Long subjectId,
+            @RequestBody List<Map<String, Object>> questions) {
+        return Result.success(aiCourseService.confirmAiQuestions(gradeId, subjectId, questions));
+    }
+
+    /**
+     * AI 知识点导入 - 预览
+     */
+    @PostMapping("/knowledges/ai-import/preview")
+    @OpLog(module = "知识点管理", operation = "AI知识点导入预览")
+    public Result<Map<String, Object>> previewAiKnowledges(
+            @RequestParam Long subjectId,
+            @RequestParam Long gradeId,
+            @RequestParam(required = false) Long chapterId,
+            @RequestParam String semester) {
+        return Result.success(aiCourseService.previewAiKnowledges(subjectId, gradeId, chapterId, semester));
+    }
+
+    /**
+     * AI 知识点导入 - 确认保存
+     */
+    @PostMapping("/knowledges/ai-import/confirm")
+    @OpLog(module = "知识点管理", operation = "AI知识点导入确认保存")
+    public Result<Map<String, Object>> confirmAiKnowledges(
+            @RequestBody List<Map<String, Object>> knowledges) {
+        return Result.success(aiCourseService.confirmAiKnowledges(knowledges));
+    }
+
     @PostMapping("/chapters/fix-subject")
     @OpLog(module = "章节管理", operation = "修复章节学科ID")
     public Result<Map<String, Object>> fixChapterSubjectIds(@RequestBody Map<Long, Long> mapping) {

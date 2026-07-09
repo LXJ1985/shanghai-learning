@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS t_question (
     analysis TEXT,
     score DECIMAL(5,1) NOT NULL DEFAULT 5.0,
     source VARCHAR(200),
+    semester VARCHAR(20),
     status TINYINT NOT NULL DEFAULT 0,
     created_by BIGINT,
     deleted TINYINT NOT NULL DEFAULT 0,
@@ -178,3 +179,4 @@ CREATE TABLE IF NOT EXISTS t_operation_log (
 
 -- 增量迁移: 为已有表补充缺失列（IF NOT EXISTS 保证幂等）
 ALTER TABLE t_question ADD COLUMN IF NOT EXISTS knowledge_id BIGINT;
+ALTER TABLE t_question ADD COLUMN IF NOT EXISTS semester VARCHAR(20);

@@ -4,6 +4,8 @@ import type { QuestionInfo, Result, PageResult } from '../types'
 /** 题目CRUD */
 export const getQuestionsApi = (params: {
   subjectId?: number
+  gradeId?: number
+  semester?: string
   chapterId?: number
   type?: number
   keyword?: string
@@ -53,6 +55,64 @@ export const importChaptersApi = (file: File, subjectId?: number, gradeId?: numb
 export const downloadChapterTemplateApi = (format: 'txt' | 'csv' | 'xlsx' = 'txt') =>
   request.get('/admin/chapters/template', { params: { format }, responseType: 'blob' })
 
+/** AI 智能获取课程信息 - 预览 */
+export const fetchCourseByAiPreviewApi = (gradeId: number, subjectId: number, semester: string) =>
+  request.post<unknown, Result<{
+    chapters?: Array<{
+      name: string
+      sortOrder: number
+      children: Array<{ name: string; sortOrder: number }>
+      knowledgePoints: Array<{
+        name: string
+        summary: string
+        questions: Array<{
+          type: number
+          content: string
+          options: string
+          answer: string
+          analysis: string
+          difficulty: number
+          source: string
+        }>
+      }>
+    }>
+    skipped?: number
+    error?: string
+  }>>(
+    '/admin/chapters/ai-fetch/preview',
+    null,
+    { params: { gradeId, subjectId, semester } }
+  )
+
+/** AI 智能获取课程信息 - 确认保存 */
+export const fetchCourseByAiConfirmApi = (
+  gradeId: number,
+  subjectId: number,
+  chapters: Array<{
+    name: string
+    sortOrder: number
+    children: Array<{ name: string; sortOrder: number }>
+    knowledgePoints: Array<{
+      name: string
+      summary: string
+      questions: Array<{
+        type: number
+        content: string
+        options: string
+        answer: string
+        analysis: string
+        difficulty: number
+        source: string
+      }>
+    }>
+  }>
+) =>
+  request.post<unknown, Result<{ chaptersAdded: number; knowledgeAdded: number; questionsAdded: number; skipped: number; errors: string[] }>>(
+    '/admin/chapters/ai-fetch/confirm',
+    chapters,
+    { params: { gradeId, subjectId } }
+  )
+
 /** 批量导入知识点(文件上传) */
 export const importKnowledgesApi = (file: File, chapterId?: number) => {
   const formData = new FormData()
@@ -74,6 +134,91 @@ export const downloadKnowledgeTemplateApi = (
     params: { format, ...params },
     responseType: 'blob',
   })
+
+/** AI 知识点导入 - 预览 */
+export const aiImportKnowledgesPreviewApi = (
+  subjectId: number,
+  gradeId: number,
+  chapterId: number | undefined,
+  semester: string
+) =>
+  request.post<unknown, Result<{
+    chapterCount?: number
+    knowledges?: Array<{
+      chapterId: number
+      chapterName: string
+      name: string
+      summary: string
+      keyPoints: string
+      formulas: string
+      examples: string
+      sortOrder: number
+    }>
+    error?: string
+  }>>(
+    '/admin/knowledges/ai-import/preview',
+    null,
+    { params: { subjectId, gradeId, chapterId, semester } }
+  )
+
+/** AI 知识点导入 - 确认保存 */
+export const aiImportKnowledgesConfirmApi = (
+  knowledges: Array<{
+    chapterId: number
+    chapterName: string
+    name: string
+    summary: string
+    keyPoints: string
+    formulas: string
+    examples: string
+    sortOrder: number
+  }>
+) =>
+  request.post<unknown, Result<{ added: number; skipped: number; errors: string[] }>>(
+    '/admin/knowledges/ai-import/confirm',
+    knowledges
+  )
+
+/** AI 智能搜题 - 预览 */
+export const aiSearchQuestionsPreviewApi = (gradeId: number, subjectId: number, semester: string) =>
+  request.post<unknown, Result<{
+    questions?: Array<{
+      type: number
+      content: string
+      options: string
+      answer: string
+      analysis: string
+      difficulty: number
+      source: string
+      knowledge: string
+    }>
+    error?: string
+  }>>(
+    '/admin/questions/ai-search/preview',
+    null,
+    { params: { gradeId, subjectId, semester } }
+  )
+
+/** AI 智能搜题 - 确认保存 */
+export const aiSearchQuestionsConfirmApi = (
+  gradeId: number,
+  subjectId: number,
+  questions: Array<{
+    type: number
+    content: string
+    options: string
+    answer: string
+    analysis: string
+    difficulty: number
+    source: string
+    knowledge: string
+  }>
+) =>
+  request.post<unknown, Result<{ added: number; skipped: number; errors: string[] }>>(
+    '/admin/questions/ai-search/confirm',
+    questions,
+    { params: { gradeId, subjectId } }
+  )
 
 /** 获取学习统计(管理员) */
 export const getLearningStatsApi = (params?: { userId?: number; subjectId?: number }) =>

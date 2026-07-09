@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import {
   Table, Button, Select, Input, Space, Upload, message,
-  Modal, Form, InputNumber, Popconfirm, Typography, Dropdown,
+  Modal, Form, InputNumber, Popconfirm, Typography, Dropdown, Tag,
 } from 'antd'
-import { UploadOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined } from '@ant-design/icons'
+import { UploadOutlined, PlusOutlined, DeleteOutlined, EditOutlined, DownloadOutlined, CloudOutlined, FileDoneOutlined } from '@ant-design/icons'
 import {
   getQuestionsApi, createQuestionApi, updateQuestionApi,
   deleteQuestionApi, importQuestionsApi, downloadTemplateApi,
+  aiSearchQuestionsPreviewApi, aiSearchQuestionsConfirmApi,
 } from '../../api/admin'
-import { getSubjectsApi } from '../../api/study'
-import type { QuestionInfo, SubjectInfo } from '../../types'
+import { getSubjectsApi, getGradesApi } from '../../api/study'
+import type { QuestionInfo, SubjectInfo, GradeInfo } from '../../types'
 
 const { Text } = Typography
 const { TextArea } = Input
@@ -18,18 +19,39 @@ const { Option } = Select
 export default function AdminQuestions() {
   const [questions, setQuestions] = useState<QuestionInfo[]>([])
   const [subjects, setSubjects] = useState<SubjectInfo[]>([])
+  const [grades, setGrades] = useState<GradeInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [keyword, setKeyword] = useState('')
   const [selectedSubject, setSelectedSubject] = useState<number>()
+  const [selectedGrade, setSelectedGrade] = useState<number>()
+  const [selectedSemester, setSelectedSemester] = useState<string>()
   const [modalOpen, setModalOpen] = useState(false)
   const [editItem, setEditItem] = useState<QuestionInfo | null>(null)
   const [form] = Form.useForm()
 
+  // AI 搜题状态
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [aiSubject, setAiSubject] = useState<number>()
+  const [aiGrade, setAiGrade] = useState<number>()
+  const [aiSemester, setAiSemester] = useState('上学期')
+  const [aiSearching, setAiSearching] = useState(false)
+  const [aiQuestions, setAiQuestions] = useState<Array<{
+    type: number
+    content: string
+    options: string
+    answer: string
+    analysis: string
+    difficulty: number
+    source: string
+    knowledge: string
+  }>>([])
+  const [aiConfirming, setAiConfirming] = useState(false)
+
   const loadData = () => {
     setLoading(true)
-    getQuestionsApi({ subjectId: selectedSubject, keyword, page, size: 10 })
+    getQuestionsApi({ subjectId: selectedSubject, gradeId: selectedGrade, semester: selectedSemester, keyword, page, size: 10 })
       .then((res) => {
         setQuestions(res.data.records)
         setTotal(res.data.total)
@@ -39,11 +61,12 @@ export default function AdminQuestions() {
 
   useEffect(() => {
     getSubjectsApi().then((res) => setSubjects(res.data ?? []))
+    getGradesApi().then((res) => setGrades(res.data ?? []))
   }, [])
 
   useEffect(() => {
     loadData()
-  }, [selectedSubject, keyword, page])
+  }, [selectedSubject, selectedGrade, selectedSemester, keyword, page])
 
   const handleSave = async (values: any) => {
     if (editItem) {
@@ -74,6 +97,48 @@ export default function AdminQuestions() {
       message.error('导入失败')
     }
     return false
+  }
+
+  const handleAiSearch = async () => {
+    if (!aiSubject || !aiGrade) {
+      message.warning('请选择学科和年级')
+      return
+    }
+    setAiSearching(true)
+    try {
+      const res = await aiSearchQuestionsPreviewApi(aiGrade, aiSubject, aiSemester)
+      if (res.data.error) {
+        message.error(res.data.error)
+        return
+      }
+      const qs = res.data.questions ?? []
+      if (qs.length === 0) {
+        message.warning('AI 未返回有效题目')
+        return
+      }
+      setAiQuestions(qs)
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || 'AI 搜题失败')
+    } finally {
+      setAiSearching(false)
+    }
+  }
+
+  const handleAiConfirm = async () => {
+    if (!aiSubject || !aiGrade) return
+    setAiConfirming(true)
+    try {
+      const res = await aiSearchQuestionsConfirmApi(aiGrade, aiSubject, aiQuestions)
+      setAiModalOpen(false)
+      setAiQuestions([])
+      const skipped = res.data.skipped ?? 0
+      message.success(`已导入 ${res.data.added} 道题目${skipped > 0 ? `，跳过 ${skipped} 道重复` : ''}`)
+      loadData()
+    } catch {
+      message.error('保存失败')
+    } finally {
+      setAiConfirming(false)
+    }
   }
 
   const handleDownloadTemplate = async (format: 'txt' | 'csv' | 'xlsx') => {
@@ -221,12 +286,37 @@ export default function AdminQuestions() {
           onChange={(v) => { setSelectedSubject(v); setPage(1) }}
           options={subjects.map((s) => ({ label: s.name, value: s.id }))}
         />
+        <Select
+          placeholder="年级"
+          style={{ width: 120 }}
+          allowClear
+          value={selectedGrade}
+          onChange={(v) => { setSelectedGrade(v); setPage(1) }}
+          options={grades.map((g) => ({ label: g.name, value: g.id }))}
+        />
+        <Select
+          placeholder="学期"
+          style={{ width: 110 }}
+          allowClear
+          value={selectedSemester}
+          onChange={(v) => { setSelectedSemester(v); setPage(1) }}
+          options={[
+            { label: '上学期', value: '上学期' },
+            { label: '下学期', value: '下学期' },
+          ]}
+        />
         <Input.Search
           placeholder="搜索题目..."
           style={{ width: 200 }}
           onSearch={(v) => { setKeyword(v); setPage(1) }}
         />
         <div style={{ flex: 1 }} />
+        <Button
+          icon={<CloudOutlined />}
+          onClick={() => { setAiQuestions([]); setAiModalOpen(true) }}
+        >
+          AI 智能搜题
+        </Button>
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -309,6 +399,143 @@ export default function AdminQuestions() {
             </Form.Item>
           </div>
         </Form>
+      </Modal>
+
+      {/* AI 智能搜题弹窗 */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CloudOutlined style={{ color: 'var(--ink-secondary)' }} />
+            <span>AI 智能搜题</span>
+            {aiQuestions.length > 0 && (
+              <Tag color="blue" style={{ marginLeft: 'auto' }}>{aiQuestions.length} 道题目</Tag>
+            )}
+          </div>
+        }
+        open={aiModalOpen}
+        onCancel={() => setAiModalOpen(false)}
+        width={760}
+        styles={{ body: { maxHeight: '65vh', overflowY: 'auto', padding: '16px 24px' } }}
+        footer={
+          aiQuestions.length > 0 ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: 'var(--ink-tertiary)' }}>
+                共 {aiQuestions.length} 道题目，点击确认导入到题库
+              </span>
+              <Space>
+                <Button onClick={() => setAiModalOpen(false)}>取消</Button>
+                <Button type="primary" icon={<FileDoneOutlined />} loading={aiConfirming} onClick={handleAiConfirm}>
+                  确认导入
+                </Button>
+              </Space>
+            </div>
+          ) : undefined
+        }
+      >
+        {/* 选择区域 */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' }}>
+          <Select
+            placeholder="学科(必选)"
+            style={{ width: 130 }}
+            value={aiSubject}
+            onChange={setAiSubject}
+            options={subjects.map((s) => ({ label: s.name, value: s.id }))}
+          />
+          <Select
+            placeholder="年级(必选)"
+            style={{ width: 130 }}
+            value={aiGrade}
+            onChange={setAiGrade}
+            options={grades.map((g) => ({ label: g.name, value: g.id }))}
+          />
+          <Select
+            style={{ width: 110 }}
+            value={aiSemester}
+            onChange={setAiSemester}
+            options={[
+              { label: '上学期', value: '上学期' },
+              { label: '下学期', value: '下学期' },
+            ]}
+          />
+          <Button
+            type="primary"
+            icon={<CloudOutlined />}
+            loading={aiSearching}
+            onClick={handleAiSearch}
+            disabled={!aiSubject || !aiGrade}
+          >
+            搜索真题
+          </Button>
+        </div>
+
+        {/* 题目列表 */}
+        {aiQuestions.length > 0 && (
+          <div>
+            {aiQuestions.map((q, qi) => (
+              <div key={qi} style={{
+                padding: '10px 14px',
+                marginBottom: 8,
+                background: '#FAFAF8',
+                borderRadius: 6,
+                borderLeft: '3px solid #D4C5A9',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Tag style={{ fontSize: 10, margin: 0, lineHeight: '18px', padding: '0 6px' }}
+                    color={q.type === 1 ? 'blue' : q.type === 2 ? 'green' : 'orange'}>
+                    {q.type === 1 ? '选择' : q.type === 2 ? '填空' : '解答'}
+                  </Tag>
+                  <span style={{ color: '#E8A608', fontSize: 11 }}>
+                    {'★'.repeat(q.difficulty)}{'☆'.repeat(5 - q.difficulty)}
+                  </span>
+                  {q.knowledge && (
+                    <Tag style={{ fontSize: 10, margin: 0 }}>{q.knowledge}</Tag>
+                  )}
+                  {q.source && (
+                    <span style={{ fontSize: 10, color: 'var(--ink-tertiary)', marginLeft: 'auto' }}>
+                      <FileDoneOutlined style={{ marginRight: 2 }} />{q.source}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--ink-primary)', lineHeight: 1.6, marginBottom: 4 }}>
+                  {q.content}
+                </div>
+                {q.type === 1 && q.options && (
+                  <div style={{ fontSize: 12, color: 'var(--ink-secondary)' }}>
+                    {(() => {
+                      try {
+                        const opts = JSON.parse(q.options)
+                        return opts.map((opt: string, oi: number) => (
+                          <span key={oi} style={{ marginRight: 14, display: 'inline-block', marginTop: 2 }}>
+                            {opt}
+                            {q.answer && q.answer.trim() === opt.charAt(0) && (
+                              <span style={{ color: '#4A7C59', fontWeight: 600 }}> ✓</span>
+                            )}
+                          </span>
+                        ))
+                      } catch {
+                        return <span>{q.options}</span>
+                      }
+                    })()}
+                  </div>
+                )}
+                {q.type === 2 && q.answer && (
+                  <div style={{ fontSize: 12, color: '#4A7C59', marginTop: 2 }}>答案: {q.answer}</div>
+                )}
+                {q.analysis && (
+                  <div style={{ fontSize: 11, color: 'var(--ink-tertiary)', marginTop: 4, fontStyle: 'italic' }}>
+                    解析: {q.analysis}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {aiQuestions.length === 0 && !aiSearching && (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-tertiary)' }}>
+            选择学科、年级和学期后，点击“搜索真题”即可获取 AI 生成的近5年真题
+          </div>
+        )}
       </Modal>
     </div>
   )

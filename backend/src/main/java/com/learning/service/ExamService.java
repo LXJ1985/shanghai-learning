@@ -27,11 +27,12 @@ public class ExamService {
      * 智能组卷 - 从题库中随机选题
      */
     @Transactional
-    public Exam createExam(Long userId, String title, Long subjectId, Long chapterId,
+    public Exam createExam(Long userId, String title, Long subjectId, Long gradeId, Long chapterId,
                            int questionCount, int timeLimit, Integer difficulty) {
         // 查询符合条件的题目
         LambdaQueryWrapper<Question> wrapper = new LambdaQueryWrapper<Question>()
-            .eq(Question::getSubjectId, subjectId);
+            .eq(Question::getSubjectId, subjectId)
+            .eq(Question::getGradeId, gradeId);
         if (chapterId != null) {
             wrapper.eq(Question::getChapterId, chapterId);
         }
@@ -57,7 +58,7 @@ public class ExamService {
         exam.setCreatedBy(userId);
         exam.setTitle(title);
         exam.setSubjectId(subjectId);
-        exam.setGradeId(chapterId);
+        exam.setGradeId(gradeId);
         exam.setExamType(1); // 默认类型
         exam.setDuration(timeLimit);
         int totalScore = selected.stream().mapToInt(Question::getScore).sum();
@@ -145,10 +146,17 @@ public class ExamService {
             boolean isCorrect = false;
             int score = 0;
             if (q.getType() == 1 || q.getType() == 4) {
+                // 选择题、判断题：选项字母匹配
                 isCorrect = q.getAnswer().trim().equalsIgnoreCase(userAnswer.trim());
                 score = isCorrect ? eq.getScore() : 0;
+            } else if (q.getType() == 2) {
+                // 填空题：答案文本匹配（去除空格后比较）
+                String correctAnswer = q.getAnswer().trim();
+                String userAns = userAnswer != null ? userAnswer.trim() : "";
+                isCorrect = correctAnswer.equals(userAns);
+                score = isCorrect ? eq.getScore() : 0;
             }
-            // 主观题暂给0分，后续AI评分
+            // 其他主观题暂给0分，后续AI评分
 
             totalScore += score;
 
@@ -163,6 +171,11 @@ public class ExamService {
 
         record.setTotalScore(totalScore);
         record.setStatus(1); // 已完成
+        // 计算用时
+        if (record.getSubmittedAt() != null) {
+            long seconds = java.time.Duration.between(record.getSubmittedAt(), LocalDateTime.now()).getSeconds();
+            record.setTimeSpent((int) Math.max(seconds, 0));
+        }
         examRecordMapper.updateById(record);
 
         return record;

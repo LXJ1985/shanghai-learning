@@ -8,6 +8,8 @@ import SubjectList from './pages/student/SubjectList'
 import KnowledgeDetail from './pages/student/KnowledgeDetail'
 import Practice from './pages/student/Practice'
 import ExamCreate from './pages/student/ExamCreate'
+import ExamTaking from './pages/student/ExamTaking'
+import ExamResult from './pages/student/ExamResult'
 import WrongQuestions from './pages/student/WrongQuestions'
 import StudentProgress from './pages/student/StudentProgress'
 import AlgorithmTeaching from './pages/student/AlgorithmTeaching'
@@ -122,6 +124,8 @@ function App() {
             <Route path="biology" element={<BiologyDemo />} />
             <Route path="geography" element={<GeographyDemo />} />
             <Route path="exam" element={<ExamCreate />} />
+            <Route path="exam/:examId/take" element={<ExamTaking />} />
+            <Route path="exam/result/:recordId" element={<ExamResult />} />
             <Route path="wrong" element={<WrongQuestions />} />
             <Route path="progress" element={<StudentProgress />} />
             <Route path="admin" element={<AdminQuestions />} />

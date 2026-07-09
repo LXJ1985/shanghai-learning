@@ -56,3 +56,7 @@ springdoc:
 logging:
   level:
     com.learning: debug
+
+# 通义千问 DashScope API
+dashscope:
+  api-key: ${DASHSCOPE_API_KEY:}

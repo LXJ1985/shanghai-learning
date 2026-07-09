@@ -26,6 +26,7 @@ public class ExamController {
             userId,
             (String) body.get("title"),
             Long.valueOf(body.get("subjectId").toString()),
+            Long.valueOf(body.get("gradeId").toString()),
             body.get("chapterId") != null ? Long.valueOf(body.get("chapterId").toString()) : null,
             Integer.parseInt(body.get("questionCount").toString()),
             Integer.parseInt(body.get("timeLimit").toString()),

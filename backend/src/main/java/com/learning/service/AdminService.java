@@ -30,10 +30,12 @@ public class AdminService {
     /**
      * 题目分页查询
      */
-    public Page<Question> getQuestions(Long subjectId, Long chapterId, Integer type,
+    public Page<Question> getQuestions(Long subjectId, Long gradeId, String semester, Long chapterId, Integer type,
                                        String keyword, int page, int size) {
         LambdaQueryWrapper<Question> wrapper = new LambdaQueryWrapper<>();
         if (subjectId != null) wrapper.eq(Question::getSubjectId, subjectId);
+        if (gradeId != null) wrapper.eq(Question::getGradeId, gradeId);
+        if (semester != null && !semester.isBlank()) wrapper.eq(Question::getSemester, semester);
         if (chapterId != null) wrapper.eq(Question::getChapterId, chapterId);
         if (type != null) wrapper.eq(Question::getType, type);
         if (keyword != null && !keyword.isBlank()) {

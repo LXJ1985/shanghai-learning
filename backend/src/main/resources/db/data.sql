@@ -12,7 +12,7 @@ MERGE INTO t_subject (id, name, sort_order) KEY(id) VALUES
 
 -- 年级数据
 MERGE INTO t_grade (id, name, sort_order) KEY(id) VALUES
-(1, '六年级', 1), (2, '七年级', 2), (3, '八年级', 3), (4, '九年级', 4);
+(1, '六年级', 1), (2, '七年级', 2), (3, '八年级', 3), (4, '九年级', 4), (5, '五年级', 0);
 
 -- 示例章节数据（数学八年级）
 MERGE INTO t_chapter (id, subject_id, grade_id, parent_id, name, sort_order) KEY(id) VALUES

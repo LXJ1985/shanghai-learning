@@ -5,6 +5,7 @@ import type { ExamInfo, ExamRecord, AnswerDetail, Result, PageResult } from '../
 export const createExamApi = (data: {
   title: string
   subjectId: number
+  gradeId: number
   chapterId?: number
   questionCount: number
   timeLimit: number

@@ -22,6 +22,7 @@ public class Question {
     private Integer difficulty; // 1-5
     private Integer score;
     private String source;
+    private String semester;
     private Integer status;
     private Long createdBy;
     @TableField(fill = FieldFill.INSERT)
